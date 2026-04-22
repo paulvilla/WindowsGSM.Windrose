@@ -30,7 +30,7 @@ WindowsGSM plugin for Windrose Dedicated Server.
 <img width="1141" height="504" alt="image" src="https://github.com/user-attachments/assets/3956e7b4-acc7-4345-a3b2-350f6db4acd0" />
 
 ### IMPORTANT
-Remember that when installing the addon in WindowsGSM, it must be named "WindowsGSM.Windrose". You need to remove the "1.0.0" from the name, both from the .zip file and from the folder inside it.
+Remember that when installing the addon in WindowsGSM, it must be named "WindowsGSM.Windrose". You need to remove the "1.0.0" or "main" from the name, both from the .zip file and from the folder inside it.
 
 
 ### Useful Notes
@@ -74,7 +74,7 @@ Remember that when installing the addon in WindowsGSM, it must be named "Windows
 <img width="1141" height="504" alt="image" src="https://github.com/user-attachments/assets/c37a7347-7422-478d-9b18-642df25e74a0" />
 
 ### IMPORTANTE
-Recuerda que al instalar el addon en WindowsGSM tiene que llamarse "WindowsGSM.Windrose" hay que quitar el 1.0.0 del nombre tanto de .zip como de la carpeta que hay dentro
+Recuerda que al instalar el addon en WindowsGSM tiene que llamarse "WindowsGSM.Windrose" hay que quitar el "1.0.0" o "main" del nombre tanto de .zip como de la carpeta que hay dentro
 
 ### Notas utiles
 
