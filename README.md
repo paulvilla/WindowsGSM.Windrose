@@ -27,6 +27,8 @@ WindowsGSM plugin for Windrose Dedicated Server.
 4. After the first successful start, stop the server from WindowsGSM.
 5. This step is required so Windrose creates its server files and the data appears in the Parameters section.
 6. After that, you can edit the available values directly from the panel.
+<img width="1141" height="504" alt="image" src="https://github.com/user-attachments/assets/3956e7b4-acc7-4345-a3b2-350f6db4acd0" />
+
 
 ### Useful Notes
 
@@ -56,6 +58,8 @@ WindowsGSM plugin for Windrose Dedicated Server.
 4. Tambien puedes importar el ZIP desde el icono de puzzle dentro de WindowsGSM.
 5. Recarga los plugins o reinicia WindowsGSM.
 6. Ve a Servers, pulsa Install Game Server y selecciona Windrose Dedicated Server.
+<img width="1141" height="504" alt="image" src="https://github.com/user-attachments/assets/c37a7347-7422-478d-9b18-642df25e74a0" />
+
 
 ### Instalacion del servidor
 
