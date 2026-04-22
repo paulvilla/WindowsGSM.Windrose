@@ -1,0 +1,14 @@
+{
+  "Version": 1,
+  "DeploymentId": "",
+  "ServerDescription_Persistent": {
+    "PersistentServerId": "",
+    "InviteCode": "",
+    "IsPasswordProtected": false,
+    "Password": "",
+    "ServerName": "My Windrose Server",
+    "WorldIslandId": "",
+    "MaxPlayerCount": 10,
+    "P2pProxyAddress": "127.0.0.1"
+  }
+}
