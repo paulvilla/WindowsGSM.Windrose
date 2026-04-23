@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using WindowsGSM.Functions;
 using WindowsGSM.GameServer.Engine;
+using WindowsGSM.GameServer.Query;
 
 namespace WindowsGSM.Plugins
 {
@@ -52,7 +53,7 @@ namespace WindowsGSM.Plugins
         public string FullName = "Windrose Dedicated Server";
         public bool AllowsEmbedConsole = true;
         public int PortIncrements = 2;
-        public object QueryMethod = null;
+        public object QueryMethod = new WindroseQuery();
 
         public string Port = "7777";
         public string QueryPort = "7778";
@@ -199,55 +200,61 @@ namespace WindowsGSM.Plugins
 
         public async Task Stop(Process p)
         {
-            if (p == null)
-            {
-                return;
-            }
-
             try
             {
-                if (p.HasExited)
+                if (p == null)
                 {
                     return;
                 }
-            }
-            catch
-            {
-                return;
-            }
 
-            bool sentSave = SendConsoleCommand(p, "save world");
-            if (sentSave)
-            {
-                await Task.Delay(3000);
-            }
-
-            bool sentQuit = SendConsoleCommand(p, "quit");
-            if (sentQuit && await WaitForExitAsync(p, 20000))
-            {
-                return;
-            }
-
-            try
-            {
-                if (!p.HasExited && p.MainWindowHandle != IntPtr.Zero)
+                try
                 {
-                    p.CloseMainWindow();
-                    if (await WaitForExitAsync(p, 5000))
+                    if (p.HasExited)
                     {
                         return;
                     }
                 }
-            }
-            catch
-            {
-            }
-
-            try
-            {
-                if (!p.HasExited)
+                catch
                 {
-                    p.Kill();
+                    return;
+                }
+
+                bool sentSave = SendConsoleCommand(p, "save world");
+                if (sentSave)
+                {
+                    await Task.Delay(3000);
+                }
+
+                bool sentQuit = SendConsoleCommand(p, "quit");
+                if (sentQuit && await WaitForExitAsync(p, 20000))
+                {
+                    return;
+                }
+
+                try
+                {
+                    if (!p.HasExited && p.MainWindowHandle != IntPtr.Zero)
+                    {
+                        p.CloseMainWindow();
+                        if (await WaitForExitAsync(p, 5000))
+                        {
+                            return;
+                        }
+                    }
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    if (!p.HasExited)
+                    {
+                        p.Kill();
+                    }
+                }
+                catch
+                {
                 }
             }
             catch
@@ -263,21 +270,31 @@ namespace WindowsGSM.Plugins
                 string configPath = GetServerDescriptionPath();
                 Directory.CreateDirectory(Path.GetDirectoryName(configPath));
 
-                JObject root = new JObject();
+                JObject root;
                 if (File.Exists(configPath))
                 {
                     try
                     {
                         root = JObject.Parse(File.ReadAllText(configPath));
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        root = new JObject();
+                        Error = $"Failed to parse {Path.GetFileName(configPath)}: {e.Message}";
+                        return;
                     }
+                }
+                else
+                {
+                    root = new JObject();
                 }
 
                 settings ??= ParsePluginParameters(_serverData.ServerParam);
-                JObject persistent = root["ServerDescription_Persistent"] as JObject ?? new JObject();
+                JObject persistent = root["ServerDescription_Persistent"] as JObject;
+                if (persistent == null)
+                {
+                    persistent = new JObject();
+                    root["ServerDescription_Persistent"] = persistent;
+                }
 
                 string existingPassword = persistent.Value<string>("Password") ?? string.Empty;
                 bool existingProtected = persistent.Value<bool?>("IsPasswordProtected") ?? false;
@@ -295,24 +312,53 @@ namespace WindowsGSM.Plugins
                     ? settings.P2pProxyAddress
                     : (persistent.Value<string>("P2pProxyAddress") ?? GetDefaultProxyAddress());
 
-                var output = new JObject
+                if (root["Version"] == null)
                 {
-                    ["Version"] = root["Version"] ?? 1,
-                    ["DeploymentId"] = root["DeploymentId"] ?? string.Empty,
-                    ["ServerDescription_Persistent"] = new JObject
-                    {
-                        ["PersistentServerId"] = persistent["PersistentServerId"] ?? string.Empty,
-                        ["InviteCode"] = persistent["InviteCode"] ?? string.Empty,
-                        ["IsPasswordProtected"] = isPasswordProtected,
-                        ["Password"] = password,
-                        ["ServerName"] = string.IsNullOrWhiteSpace(_serverData.ServerName) ? "Windrose Dedicated Server" : _serverData.ServerName,
-                        ["WorldIslandId"] = persistent["WorldIslandId"] ?? string.Empty,
-                        ["MaxPlayerCount"] = ParseIntOrDefault(_serverData.ServerMaxPlayer, 10),
-                        ["P2pProxyAddress"] = proxyAddress
-                    }
-                };
+                    root["Version"] = 1;
+                }
 
-                File.WriteAllText(configPath, output.ToString(Formatting.Indented), new UTF8Encoding(false));
+                if (root["DeploymentId"] == null)
+                {
+                    root["DeploymentId"] = string.Empty;
+                }
+
+                if (persistent["PersistentServerId"] == null)
+                {
+                    persistent["PersistentServerId"] = string.Empty;
+                }
+
+                if (persistent["InviteCode"] == null)
+                {
+                    persistent["InviteCode"] = string.Empty;
+                }
+
+                if (persistent["WorldIslandId"] == null)
+                {
+                    persistent["WorldIslandId"] = string.Empty;
+                }
+
+                persistent["IsPasswordProtected"] = isPasswordProtected;
+                persistent["Password"] = password;
+
+                if (!string.IsNullOrWhiteSpace(_serverData.ServerName))
+                {
+                    persistent["ServerName"] = _serverData.ServerName;
+                }
+                else if (string.IsNullOrWhiteSpace(persistent.Value<string>("ServerName")))
+                {
+                    persistent["ServerName"] = "Windrose Dedicated Server";
+                }
+
+                persistent["MaxPlayerCount"] = ParseIntOrDefault(_serverData.ServerMaxPlayer, 10);
+                persistent["P2pProxyAddress"] = proxyAddress;
+
+                if (persistent.Value<bool?>("UseDirectConnection") == true
+                    && int.TryParse(_serverData.ServerPort, out int directConnectionPort))
+                {
+                    persistent["DirectConnectionServerPort"] = directConnectionPort;
+                }
+
+                WriteJsonAtomically(configPath, root);
             }
             catch (Exception e)
             {
@@ -381,7 +427,7 @@ namespace WindowsGSM.Plugins
                 worldDescription["WorldSettings"] = worldSettings;
                 root["WorldDescription"] = worldDescription;
 
-                File.WriteAllText(configPath, root.ToString(Formatting.Indented), new UTF8Encoding(false));
+                WriteJsonAtomically(configPath, root);
             }
             catch (Exception e)
             {
@@ -968,6 +1014,270 @@ namespace WindowsGSM.Plugins
             return "-stdout -FullStdOutLogOutput -AllowStdOutLogVerbosity -forcelogflush -UTF8Output";
         }
 
+        private static void WriteJsonAtomically(string path, JToken document)
+        {
+            string tempPath = path + ".tmp";
+            string json = document?.ToString(Formatting.Indented) ?? string.Empty;
+
+            File.WriteAllText(tempPath, json, new UTF8Encoding(false));
+
+            if (File.Exists(path))
+            {
+                File.Replace(tempPath, path, null);
+                return;
+            }
+
+            File.Move(tempPath, path);
+        }
+
+        public sealed class WindroseQuery
+        {
+            private static readonly Regex ReadyToPlayRegex = new Regex(@"OnClientIsReady.*?AccountId\s+([0-9A-F]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+            private static readonly Regex DisconnectRegex = new Regex(@"(?:OnAccountFarewell|Account disconnected\.|Disconnect AccountId|OnAccountBLDisconnected|Disconnect account\.|Disconnect UE connection).*?AccountId\s+([0-9A-F]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+            private readonly A2S _a2s = new A2S();
+            private readonly UT3 _ut3 = new UT3();
+            private readonly HashSet<string> _readyAccounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            private string _address = string.Empty;
+            private int _port;
+            private string _serverConfigPath;
+            private string _serverDescriptionPath;
+            private string _logPath;
+            private long _logOffset;
+            private bool _logInitialized;
+
+            public void SetAddressPort(string address, int port, int timeout = 5)
+            {
+                _a2s.SetAddressPort(address, port, timeout);
+                _ut3.SetAddressPort(address, port, timeout);
+
+                _address = NormalizeIpAddress(address);
+                _port = port;
+            }
+
+            public async Task<string> GetPlayersAndMaxPlayers()
+            {
+                string players = await _a2s.GetPlayersAndMaxPlayers();
+                if (!string.IsNullOrWhiteSpace(players))
+                {
+                    return players;
+                }
+
+                players = await _ut3.GetPlayersAndMaxPlayers();
+                if (!string.IsNullOrWhiteSpace(players))
+                {
+                    return players;
+                }
+
+                return TryGetPlayersAndMaxPlayersFromLogs();
+            }
+
+            private string TryGetPlayersAndMaxPlayersFromLogs()
+            {
+                try
+                {
+                    if (!TryResolveServerPaths())
+                    {
+                        return null;
+                    }
+
+                    int maxPlayers = ReadMaxPlayers();
+                    if (maxPlayers <= 0)
+                    {
+                        return null;
+                    }
+
+                    UpdateConnectedAccountsFromLog();
+                    return $"{_readyAccounts.Count.ToString(CultureInfo.InvariantCulture)}/{maxPlayers.ToString(CultureInfo.InvariantCulture)}";
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
+            private bool TryResolveServerPaths()
+            {
+                if (!string.IsNullOrWhiteSpace(_logPath) && !string.IsNullOrWhiteSpace(_serverConfigPath))
+                {
+                    return true;
+                }
+
+                string serversRoot = Path.Combine(MainWindow.WGSM_PATH, "servers");
+                if (!Directory.Exists(serversRoot))
+                {
+                    return false;
+                }
+
+                string fallbackServerDir = null;
+                foreach (string serverDir in Directory.GetDirectories(serversRoot))
+                {
+                    string configPath = Path.Combine(serverDir, "configs", "WindowsGSM.cfg");
+                    if (!File.Exists(configPath))
+                    {
+                        continue;
+                    }
+
+                    string queryPortValue = TryReadConfigValue(configPath, "serverqueryport");
+                    if (!int.TryParse(queryPortValue, out int queryPort) || queryPort != _port)
+                    {
+                        continue;
+                    }
+
+                    string configAddress = NormalizeIpAddress(TryReadConfigValue(configPath, "serverip"));
+                    if (IsMatchingAddress(configAddress, _address))
+                    {
+                        SetServerPaths(serverDir, configPath);
+                        return true;
+                    }
+
+                    if (fallbackServerDir == null)
+                    {
+                        fallbackServerDir = serverDir;
+                    }
+                }
+
+                if (fallbackServerDir == null)
+                {
+                    return false;
+                }
+
+                SetServerPaths(fallbackServerDir, Path.Combine(fallbackServerDir, "configs", "WindowsGSM.cfg"));
+                return true;
+            }
+
+            private void SetServerPaths(string serverDir, string configPath)
+            {
+                _serverConfigPath = configPath;
+                _serverDescriptionPath = Path.Combine(serverDir, "serverfiles", "R5", "ServerDescription.json");
+                _logPath = Path.Combine(serverDir, "serverfiles", "R5", "Saved", "Logs", "R5.log");
+                _logOffset = 0;
+                _logInitialized = false;
+                _readyAccounts.Clear();
+            }
+
+            private int ReadMaxPlayers()
+            {
+                if (!string.IsNullOrWhiteSpace(_serverDescriptionPath) && File.Exists(_serverDescriptionPath))
+                {
+                    try
+                    {
+                        JObject root = JObject.Parse(File.ReadAllText(_serverDescriptionPath));
+                        int? value = root["ServerDescription_Persistent"]?.Value<int?>("MaxPlayerCount");
+                        if (value.HasValue && value.Value > 0)
+                        {
+                            return value.Value;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                string configuredMaxPlayers = TryReadConfigValue(_serverConfigPath, "servermaxplayer");
+                return int.TryParse(configuredMaxPlayers, out int maxPlayers) ? maxPlayers : 0;
+            }
+
+            private void UpdateConnectedAccountsFromLog()
+            {
+                if (string.IsNullOrWhiteSpace(_logPath) || !File.Exists(_logPath))
+                {
+                    return;
+                }
+
+                using (var stream = new FileStream(_logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                {
+                    if (!_logInitialized || _logOffset > stream.Length)
+                    {
+                        _logOffset = 0;
+                        _logInitialized = true;
+                        _readyAccounts.Clear();
+                    }
+
+                    stream.Seek(_logOffset, SeekOrigin.Begin);
+                    using (var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, true))
+                    {
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            ProcessLogLine(line);
+                        }
+                    }
+
+                    _logOffset = stream.Position;
+                }
+            }
+
+            private void ProcessLogLine(string line)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    return;
+                }
+
+                Match readyMatch = ReadyToPlayRegex.Match(line);
+                if (readyMatch.Success)
+                {
+                    _readyAccounts.Add(readyMatch.Groups[1].Value);
+                    return;
+                }
+
+                Match disconnectMatch = DisconnectRegex.Match(line);
+                if (disconnectMatch.Success)
+                {
+                    _readyAccounts.Remove(disconnectMatch.Groups[1].Value);
+                }
+            }
+
+            private static string TryReadConfigValue(string configPath, string key)
+            {
+                if (string.IsNullOrWhiteSpace(configPath) || !File.Exists(configPath))
+                {
+                    return null;
+                }
+
+                foreach (string line in File.ReadLines(configPath))
+                {
+                    int separatorIndex = line.IndexOf('=');
+                    if (separatorIndex <= 0)
+                    {
+                        continue;
+                    }
+
+                    string lineKey = line.Substring(0, separatorIndex).Trim();
+                    if (!string.Equals(lineKey, key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    return line.Substring(separatorIndex + 1).Trim().Trim('"');
+                }
+
+                return null;
+            }
+
+            private static bool IsMatchingAddress(string configAddress, string queryAddress)
+            {
+                if (string.IsNullOrWhiteSpace(configAddress) || configAddress == "0.0.0.0")
+                {
+                    return true;
+                }
+
+                if (string.IsNullOrWhiteSpace(queryAddress) || queryAddress == "0.0.0.0")
+                {
+                    return true;
+                }
+
+                return string.Equals(configAddress, queryAddress, StringComparison.OrdinalIgnoreCase);
+            }
+
+            private static string NormalizeIpAddress(string value)
+            {
+                return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+            }
+        }
+
         private sealed class BufferedConsoleMirror : IDisposable
         {
             private const int MaxVisibleLines = 5000;
@@ -1269,9 +1579,15 @@ namespace WindowsGSM.Plugins
                 }
             }
 
-            if (ConsoleCommandHelper.SendCommand(process.Id, command))
+            try
             {
-                return true;
+                if (ConsoleCommandHelper.SendCommand(process.Id, command))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
             }
 
             try

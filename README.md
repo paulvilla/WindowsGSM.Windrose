@@ -4,6 +4,12 @@ WindowsGSM plugin for Windrose Dedicated Server.
 
 ## English
 
+### Features
+
+- Configure server and world parameters directly from the WindowsGSM panel without editing JSON files manually.
+- Includes current/max player counter support for the WindowsGSM server list.
+- Includes embedded console support from the WindowsGSM panel.
+
 ### WindowsGSM Installation
 
 1. Download WindowsGSM from [windowsgsm.com](https://windowsgsm.com/).
@@ -27,11 +33,11 @@ WindowsGSM plugin for Windrose Dedicated Server.
 4. After the first successful start, stop the server from WindowsGSM.
 5. This step is required so Windrose creates its server files and the data appears in the Parameters section.
 6. After that, you can edit the available values directly from the panel.
+
 <img width="1141" height="504" alt="image" src="https://github.com/user-attachments/assets/3956e7b4-acc7-4345-a3b2-350f6db4acd0" />
 
 ### IMPORTANT
 Remember that when installing the addon in WindowsGSM, it must be named "WindowsGSM.Windrose". You need to remove the "1.0.0" or "main" from the name, both from the .zip file and from the folder inside it.
-
 
 ### Useful Notes
 
@@ -39,13 +45,14 @@ Remember that when installing the addon in WindowsGSM, it must be named "Windows
 - Main config: R5\ServerDescription.json
 - World data is created after the first successful start.
 
-### Useful Links
-
-- [Official dedicated server guide](https://playwindrose.com/dedicated-server-guide/)
-- [Game page](https://store.steampowered.com/app/3041230/Windrose/)
-- [Dedicated server info](https://steamdb.info/app/4129620/info/)
 
 ## Espanol
+
+### Funciones
+
+- Permite configurar los parametros del servidor y de la partida directamente desde el panel de WindowsGSM sin editar archivos JSON a mano.
+- Incluye contador de usuarios actuales/maximos para la lista de servidores de WindowsGSM.
+- Incluye soporte de embed console desde el panel de WindowsGSM.
 
 ### Instalacion de WindowsGSM
 
@@ -62,7 +69,6 @@ Remember that when installing the addon in WindowsGSM, it must be named "Windows
 5. Recarga los plugins o reinicia WindowsGSM.
 6. Ve a Servers, pulsa Install Game Server y selecciona Windrose Dedicated Server.
 
-
 ### Instalacion del servidor
 
 1. Crea un servidor nuevo de Windrose en WindowsGSM.
@@ -71,6 +77,7 @@ Remember that when installing the addon in WindowsGSM, it must be named "Windows
 4. Despues del primer arranque correcto, deten el servidor desde WindowsGSM.
 5. Este paso es obligatorio para que Windrose genere sus archivos y los datos aparezcan en la seccion Parameters.
 6. A partir de ahi, podras modificar los valores disponibles directamente desde el panel.
+
 <img width="1141" height="504" alt="image" src="https://github.com/user-attachments/assets/c37a7347-7422-478d-9b18-642df25e74a0" />
 
 ### IMPORTANTE
@@ -81,9 +88,3 @@ Recuerda que al instalar el addon en WindowsGSM tiene que llamarse "WindowsGSM.W
 - App ID por defecto: 4129620
 - Config principal: R5\ServerDescription.json
 - Los datos del mundo se generan despues del primer arranque correcto.
-
-### Enlaces utiles
-
-- [Guia oficial del dedicado](https://playwindrose.com/dedicated-server-guide/)
-- [Pagina del juego](https://store.steampowered.com/app/3041230/Windrose/)
-- [Informacion del dedicado](https://steamdb.info/app/4129620/info/)
